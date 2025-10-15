@@ -47,7 +47,7 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
       * in response. In this case, an exception will be thrown rather
       * than generating duplicated output.
       */
-      ChaCha_RNG();
+      ChaCha_RNG(bool fast_key_erasure = false);
 
       /**
       * Provide an initial seed to the RNG, without providing an
@@ -60,8 +60,12 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
       * than generating duplicated output.
       *
       * @param seed the seed material, should be at least 256 bits
+      * @param fast_key_erasure overwrite state after each operation
+      * for backtracking resistance, costs performance dependending
+      * on request size mix, deactivated by default
       */
-      BOTAN_FUTURE_EXPLICIT ChaCha_RNG(std::span<const uint8_t> seed);
+      BOTAN_FUTURE_EXPLICIT ChaCha_RNG(std::span<const uint8_t> seed,
+                                       bool fast_key_erasure = false);
 
       /**
       * Automatic reseeding from @p underlying_rng will take place after
@@ -71,9 +75,13 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
       * to perform the periodic reseeding
       * @param reseed_interval specifies a limit of how many times
       * the RNG will be called before automatic reseeding is performed
+      * @param fast_key_erasure overwrite state after each operation
+      * for backtracking resistance, costs performance dependending
+      * on request size mix, deactivated by default
       */
       BOTAN_FUTURE_EXPLICIT ChaCha_RNG(RandomNumberGenerator& underlying_rng,
-                                       size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval);
+                                       size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval,
+                                       bool fast_key_erasure = false);
 
       /**
       * Automatic reseeding from @p entropy_sources will take place after
@@ -82,9 +90,13 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
       * @param entropy_sources will be polled to perform reseeding periodically
       * @param reseed_interval specifies a limit of how many times
       * the RNG will be called before automatic reseeding is performed.
+      * @param fast_key_erasure overwrite state after each operation
+      * for backtracking resistance, costs performance dependending
+      * on request size mix, deactivated by default
       */
       BOTAN_FUTURE_EXPLICIT ChaCha_RNG(Entropy_Sources& entropy_sources,
-                                       size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval);
+                                       size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval,
+                                       bool fast_key_erasure = false);
 
       /**
       * Automatic reseeding from @p underlying_rng and @p entropy_sources
@@ -96,10 +108,14 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
       * @param entropy_sources will be polled to perform reseeding periodically
       * @param reseed_interval specifies a limit of how many times
       * the RNG will be called before automatic reseeding is performed.
+      * @param fast_key_erasure overwrite state after each operation
+      * for backtracking resistance, costs performance dependending
+      * on request size mix, deactivated by default
       */
       ChaCha_RNG(RandomNumberGenerator& underlying_rng,
                  Entropy_Sources& entropy_sources,
-                 size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval);
+                 size_t reseed_interval = RandomNumberGenerator::DefaultReseedInterval,
+                 bool fast_key_erasure = false);
 
       std::string name() const override { return "ChaCha_RNG"; }
 
@@ -116,6 +132,7 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
 
       std::unique_ptr<MessageAuthenticationCode> m_hmac;
       std::unique_ptr<StreamCipher> m_chacha;
+      bool m_fast_key_erasure;
 };
 
 }  // namespace Botan

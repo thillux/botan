@@ -11,39 +11,47 @@
 
 namespace Botan {
 
-ChaCha_RNG::ChaCha_RNG() {
-   m_hmac = MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-   m_chacha = StreamCipher::create_or_throw("ChaCha(20)");
+ChaCha_RNG::ChaCha_RNG(bool fast_key_erasure) :
+      m_hmac(MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)")),
+      m_chacha(StreamCipher::create_or_throw("ChaCha(20)")),
+      m_fast_key_erasure(fast_key_erasure) {
    clear();
 }
 
-ChaCha_RNG::ChaCha_RNG(std::span<const uint8_t> seed) {
-   m_hmac = MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-   m_chacha = StreamCipher::create_or_throw("ChaCha(20)");
-   clear();
+ChaCha_RNG::ChaCha_RNG(std::span<const uint8_t> seed,
+                       bool fast_key_erasure) :
+      ChaCha_RNG(fast_key_erasure) {
    add_entropy(seed);
 }
 
-ChaCha_RNG::ChaCha_RNG(RandomNumberGenerator& underlying_rng, size_t reseed_interval) :
-      Stateful_RNG(underlying_rng, reseed_interval) {
-   m_hmac = MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-   m_chacha = StreamCipher::create_or_throw("ChaCha(20)");
+ChaCha_RNG::ChaCha_RNG(RandomNumberGenerator& underlying_rng,
+                       size_t reseed_interval,
+                       bool fast_key_erasure) :
+      Stateful_RNG(underlying_rng, reseed_interval),
+      m_hmac(MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)")),
+      m_chacha(StreamCipher::create_or_throw("ChaCha(20)")),
+      m_fast_key_erasure(fast_key_erasure) {
    clear();
 }
 
 ChaCha_RNG::ChaCha_RNG(RandomNumberGenerator& underlying_rng,
                        Entropy_Sources& entropy_sources,
-                       size_t reseed_interval) :
-      Stateful_RNG(underlying_rng, entropy_sources, reseed_interval) {
-   m_hmac = MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-   m_chacha = StreamCipher::create_or_throw("ChaCha(20)");
+                       size_t reseed_interval,
+                       bool fast_key_erasure) :
+      Stateful_RNG(underlying_rng, entropy_sources, reseed_interval),
+      m_hmac(MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)")),
+      m_chacha(StreamCipher::create_or_throw("ChaCha(20)")),
+      m_fast_key_erasure(fast_key_erasure) {
    clear();
 }
 
-ChaCha_RNG::ChaCha_RNG(Entropy_Sources& entropy_sources, size_t reseed_interval) :
-      Stateful_RNG(entropy_sources, reseed_interval) {
-   m_hmac = MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)");
-   m_chacha = StreamCipher::create_or_throw("ChaCha(20)");
+ChaCha_RNG::ChaCha_RNG(Entropy_Sources& entropy_sources,
+                       size_t reseed_interval,
+                       bool fast_key_erasure) :
+      Stateful_RNG(entropy_sources, reseed_interval),
+      m_hmac(MessageAuthenticationCode::create_or_throw("HMAC(SHA-256)")),
+      m_chacha(StreamCipher::create_or_throw("ChaCha(20)")),
+      m_fast_key_erasure(fast_key_erasure) {
    clear();
 }
 
@@ -60,6 +68,12 @@ void ChaCha_RNG::generate_output(std::span<uint8_t> output, std::span<const uint
    }
 
    m_chacha->write_keystream(output);
+
+   // overwrite key after each output operation for backtracking resistance
+   if(m_fast_key_erasure) {
+      const auto next_key = m_chacha->keystream_bytes(m_chacha->key_spec().maximum_keylength());
+      m_chacha->set_key(next_key);
+   }
 }
 
 void ChaCha_RNG::update(std::span<const uint8_t> input) {
