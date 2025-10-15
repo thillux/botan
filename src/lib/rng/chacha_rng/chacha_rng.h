@@ -123,6 +123,8 @@ class BOTAN_PUBLIC_API(2, 3) ChaCha_RNG final : public Stateful_RNG {
 
       size_t max_number_of_bytes_per_request() const override { return 0; }
 
+      bool fast_key_erasure() const { return m_fast_key_erasure; }
+
    private:
       void update(std::span<const uint8_t> input) override;
 
